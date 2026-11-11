@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from src.apt_parser import parse_test_repo
-from src.graph_builder import build_dependency_graph
+from src.graph_builder import build_dependency_graph, get_load_order
 
 TEST_REPO_CONTENT = """A: B, C
 B: D, E
@@ -61,6 +61,18 @@ class TestGraphBuilder(unittest.TestCase):
                 "F": [],
             },
         )
+
+    def test_load_order_with_cycle(self) -> None:
+        """Проверяет порядок загрузки на тестовом графе с циклом."""
+        graph = build_dependency_graph("A", self.repo_map, 10, "")
+        order = get_load_order("A", graph)
+        self.assertEqual(order, ["D", "F", "E", "B", "C", "A"])
+
+    def test_load_order_filtered(self) -> None:
+        """Проверяет порядок загрузки при фильтрации пакета B."""
+        graph = build_dependency_graph("A", self.repo_map, 10, "B")
+        order = get_load_order("A", graph)
+        self.assertEqual(order, ["F", "C", "A"])
 
 
 if __name__ == "__main__":

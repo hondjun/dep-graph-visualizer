@@ -11,7 +11,7 @@ from src.apt_parser import (
     parse_test_repo,
 )
 from src.config import ConfigError, parse_config
-from src.graph_builder import build_dependency_graph
+from src.graph_builder import build_dependency_graph, get_load_order
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config.json"
 
@@ -26,13 +26,6 @@ def load_repo_map(config: dict[str, Any]) -> dict[str, list[str]]:
     )
 
 
-def print_graph(graph: dict[str, list[str]]) -> None:
-    """Выводит построенный граф зависимостей в консоль."""
-    for pkg, deps in graph.items():
-        deps_str = ", ".join(deps) if deps else "нет зависимостей"
-        print(f"{pkg} -> {deps_str}")
-
-
 def main() -> int:
     """Точка входа CLI-приложения."""
     config_path = sys.argv[1] if len(sys.argv) > 1 else str(DEFAULT_CONFIG)
@@ -45,7 +38,9 @@ def main() -> int:
             config["max_depth"],
             config["filter_substring"],
         )
-        print_graph(graph)
+        load_order = get_load_order(config["package_name"], graph)
+        for pkg in load_order:
+            print(pkg)
     except (ConfigError, RepoError) as exc:
         print(f"Ошибка: {exc}", file=sys.stderr)
         return 1

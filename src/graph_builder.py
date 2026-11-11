@@ -79,3 +79,36 @@ def build_dependency_graph(
         filter_substring,
     )
     return graph
+
+STATE_UNVISITED = 0
+STATE_VISITING = 1
+STATE_VISITED = 2
+
+
+def visit_load_node(
+    node: str,
+    graph: dict[str, list[str]],
+    state: dict[str, int],
+    order: list[str],
+) -> None:
+    """Рекурсивно обходит зависимости в post-order для порядка загрузки."""
+    current_state = state.get(node, STATE_UNVISITED)
+    if current_state != STATE_UNVISITED:
+        return
+    state[node] = STATE_VISITING
+    for dep in graph.get(node, []):
+        visit_load_node(dep, graph, state, order)
+    state[node] = STATE_VISITED
+    order.append(node)
+
+
+def get_load_order(
+    root_package: str, graph: dict[str, list[str]]
+) -> list[str]:
+    """Возвращает порядок загрузки пакетов от листьев к корневому."""
+    if root_package not in graph:
+        return []
+    state: dict[str, int] = {}
+    order: list[str] = []
+    visit_load_node(root_package, graph, state, order)
+    return order
