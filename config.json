@@ -1,8 +1,8 @@
 {
-  "package_name": "curl",
-  "repo_url": "http://archive.ubuntu.com/ubuntu/dists/noble/main/binary-amd64/Packages.gz",
-  "test_mode": false,
-  "package_version": "8.5.0-2ubuntu10",
+  "package_name": "A",
+  "repo_url": "test_repo.txt",
+  "test_mode": true,
+  "package_version": "1.0",
   "output_file": "graph.png",
   "ascii_tree": true,
   "max_depth": 3,

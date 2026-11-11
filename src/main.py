@@ -11,7 +11,13 @@ from src.apt_parser import (
     parse_test_repo,
 )
 from src.config import ConfigError, parse_config
-from src.graph_builder import build_dependency_graph, get_load_order
+from src.graph_builder import build_dependency_graph
+from src.visualizer import (
+    RenderError,
+    build_ascii_tree,
+    generate_d2_text,
+    render_d2_to_png,
+)
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config.json"
 
@@ -38,10 +44,12 @@ def main() -> int:
             config["max_depth"],
             config["filter_substring"],
         )
-        load_order = get_load_order(config["package_name"], graph)
-        for pkg in load_order:
-            print(pkg)
-    except (ConfigError, RepoError) as exc:
+        d2_text = generate_d2_text(config["package_name"], graph)
+        render_d2_to_png(d2_text, config["output_file"])
+        print(f"Граф сохранён в файл: {config['output_file']}")
+        if config["ascii_tree"]:
+            print(build_ascii_tree(config["package_name"], graph))
+    except (ConfigError, RepoError, RenderError) as exc:
         print(f"Ошибка: {exc}", file=sys.stderr)
         return 1
     return 0
