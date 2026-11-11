@@ -5,8 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.main import ConfigError, parse_config
-
+from src.config import ConfigError, parse_config
 
 class TestConfigValidation(unittest.TestCase):
     """Набор тестов для проверки обработки ошибок параметров."""
