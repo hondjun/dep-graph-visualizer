@@ -1,9 +1,10 @@
-"""Парсер индексов репозитория пакетов Ubuntu (APT)."""
+"""Парсер индексов репозитория Ubuntu (APT) и тестовых файлов."""
 
 import gzip
 import lzma
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 REQUEST_TIMEOUT = 30
 
@@ -59,21 +60,52 @@ def parse_depends_field(raw_depends: str) -> list[str]:
     return dependencies
 
 
-def get_direct_dependencies(
-    index_text: str, package_name: str, package_version: str
-) -> list[str]:
-    """Находит пакет заданной версии и возвращает его прямые зависимости."""
+def extract_deps_from_fields(fields: dict[str, str]) -> list[str]:
+    """Объединяет Pre-Depends и Depends одного блока пакета."""
+    raw_pre = fields.get("Pre-Depends", "")
+    raw_dep = fields.get("Depends", "")
+    combined = ", ".join(filter(None, [raw_pre, raw_dep]))
+    return parse_depends_field(combined)
+
+
+def build_apt_repo_map(
+    index_text: str, root_package: str, root_version: str
+) -> dict[str, list[str]]:
+    """Строит карту зависимостей из индекса APT с учетом версии корня."""
+    repo_map: dict[str, list[str]] = {}
+    root_found = False
     for block in index_text.strip().split("\n\n"):
         if not block.strip():
             continue
         fields = parse_stanza(block)
-        is_same_pkg = fields.get("Package") == package_name
-        is_same_ver = fields.get("Version") == package_version
-        if is_same_pkg and is_same_ver:
-            raw_pre = fields.get("Pre-Depends", "")
-            raw_dep = fields.get("Depends", "")
-            combined = ", ".join(filter(None, [raw_pre, raw_dep]))
-            return parse_depends_field(combined)
-    raise RepoError(
-        f"Пакет '{package_name}' версии '{package_version}' не найден."
-    )
+        pkg = fields.get("Package", "")
+        ver = fields.get("Version", "")
+        if not pkg:
+            continue
+        if pkg == root_package and ver == root_version:
+            repo_map[pkg] = extract_deps_from_fields(fields)
+            root_found = True
+        elif pkg != root_package and pkg not in repo_map:
+            repo_map[pkg] = extract_deps_from_fields(fields)
+    if not root_found:
+        raise RepoError(
+            f"Пакет '{root_package}' версии '{root_version}' не найден."
+        )
+    return repo_map
+
+
+def parse_test_repo(file_path: str) -> dict[str, list[str]]:
+    """Читает тестовый репозиторий вида 'A: B, C' из файла."""
+    repo_map: dict[str, list[str]] = {}
+    lines = Path(file_path).read_text(encoding="utf-8").splitlines()
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if ":" not in stripped:
+            raise RepoError(f"Некорректная строка в тесте: {stripped}")
+        pkg, raw_deps = stripped.split(":", 1)
+        pkg_name = pkg.strip()
+        deps = [d.strip() for d in raw_deps.split(",") if d.strip()]
+        repo_map[pkg_name] = deps
+    return repo_map
