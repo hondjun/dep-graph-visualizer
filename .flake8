@@ -1,0 +1,4 @@
+[flake8]
+per-file-ignores =
+    tests/test_graph_builder.py:N802
+    tests/test_config.py:N802
